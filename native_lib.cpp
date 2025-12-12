@@ -8,6 +8,10 @@
 namespace fs = std::filesystem;
 using str = std::string;
 
+QUEUE_STACK = 4; //스레드당 큐의 개수 Q1(사용위치)
+
+
+
 // ============================================================
 // 1. [Compile-Time] 문자열 해시 함수
 //    (switch-case의 case 라벨에 사용)
@@ -103,18 +107,48 @@ uint8_t get_mod(const str& mod){
     }
 }
 
-FILE* temp_file(const str& filepath){
-    str tempfilepath = filepath + ".temp";
-    
-    FILE* tempfile = fopen(tempfilepath.c_str(), "wb");
-    return tempfile;
+struct FIlehandle {
+    int fd;
+    size_t size;
+    off_t offset;
+    int prot;
+    int flags;
+} // mmap용 파일 핸들 구조체(기본형)
+
+void get_handle(const str& filepath, FIlehandle& handle)
+{
+    int fd = open(filepath.c_str(), O_RDONLY);
+    struct stat st;
+    fstat(fd, &st);
+    handle.fd = fd;
+    handle.size = st.st_size;
+    handle.offset = 0;
+    handle.prot = PROT_READ;
+    handle.flags = MAP_SHARED;
 }
 
-int64_t get_filesize(const str& filepath){
-    return static_cast<int64_t> (fs::file_size(filepath));
+uint8_t* map_file(const int work, const FIlehandle& handle, off_t offset, int prot, int flags)
+{
+    size_t size;
+    switch (work){
+        case 1: //원본 읽기
+             size = handle.size;
+             break;
+        case 2: //암호화 파일 쓰기
+            size = handle.size + sizeof(Header);
+            break;
+        case 3: //암호화 파일 읽기
+            size = handle.size;
+            break;
+        case 4: //복호화 파일 쓰기
+            size = handle.size - sizeof(Header);
+            break;
+    }
+    return static_cast<uint8_t*>(mmap(NULL, size, prot, flags, handle.fd, offset));
 }
 
-void buffered_ctr_worker(const uint8_t* plainfile, const uint8_t* tempfile, const int8_t algorithm, const str& hexkey, const str& hexiv, int start, int chunksize, int chunknum){
+
+void buffered_ctr_worker(const uint8_t* plainfile, const uint8_t* tempfile, const int8_t algorithm, const str& hexkey, const str& hexiv, int start, int chunksize, int chunknum, int threadcount){
     
     auto key = Botan::hex_decode_locked(hexkey);
     auto iv = Botan::hex_decode_locked(hexiv);
@@ -132,12 +166,10 @@ void buffered_ctr_worker(const uint8_t* plainfile, const uint8_t* tempfile, cons
             break;
     }
             
-    auto enc = Botan::StreamCiper::create_or_throw(algo)
-    
-   for(int i = 0; i <= chunksize*chunknum; i += chunksize)
-   {
-       enc -> set_key()
-   }
+    BS::thread_pool pool(threadcount);
+   
+    std::counting_semaphore<> gate(threadcount*QUEUE_STACK); //Q1
+
 }
 
 
