@@ -111,7 +111,7 @@ struct FFilehandle {
     int fd;
     size_t size;
 
-} // mmap용 파일 핸들 구조체(기본형)
+}; // mmap용 파일 핸들 구조체(기본형)
 
 void get_handle(const str& filepath, FFilehandle& handle)
 {
@@ -207,7 +207,7 @@ void buffered_ctr_worker(const uint8_t* plainfile, const uint8_t* tempfile, cons
 
 
 
-int encrypt(const str& filepath, const str& pbkdf, const str& algorithm, const str& mode, const str& key, const str& iv, int threadcount, bool mac, const int chunksize, const str& writepath = ""){
+int encrypt(const str& filepath, const str& pbkdf, const str& algorithm, const str& mode, const str& key, const str& iv, int threadcount, bool mac, +const int chunksize, const str& writepath = ""){
 
 
     Header header;
@@ -243,3 +243,20 @@ int encrypt(const str& filepath, const str& pbkdf, const str& algorithm, const s
     buffered_ctr_worker(plainfile, tempfile, header.algo, key, iv, 0, chunksize, (plainhandle.size + chunksize -1)/chunksize, threadcount, true, plainhandle.size);
 
 }
+
+
+int main(){
+    str filepath = "example.txt";
+    str pbkdf = "PBKDF2";
+    str algorithm = "AES-256";
+    str mode = "CTR";
+    str key = "000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F"; // 32 bytes hex
+    str iv = "000102030405060708090A0B0C0D0E0F"; // 16 bytes hex
+    int threadcount = 4;
+    bool mac = true;
+    int chunksize = 1024 * 1024; // 1MB
+
+    encrypt(filepath, pbkdf, algorithm, mode, key, iv, threadcount, mac, chunksize);
+
+    return 0;
+};
