@@ -14,6 +14,7 @@
 #include <botan/stream_cipher.h> // Botan::StreamCipher
 
 namespace fs = std::filesystem;
+
 using str = std::string;
 
 int QUEUE_STACK = 4; //스레드당 큐의 개수 Q1(사용위치)
