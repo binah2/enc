@@ -226,4 +226,5 @@ int encrypt(const str& filepath, const str& pbkdf, const str& algorithm, const s
 
     FFilehandle temphandle;
     get_handle(temp_filepath, temphandle);
+    
 }
