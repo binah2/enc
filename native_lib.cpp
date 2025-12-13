@@ -8,7 +8,7 @@
 namespace fs = std::filesystem;
 using str = std::string;
 
-QUEUE_STACK = 4; //스레드당 큐의 개수 Q1(사용위치)
+int QUEUE_STACK = 4; //스레드당 큐의 개수 Q1(사용위치)
 
 
 
@@ -125,6 +125,16 @@ void get_handle(const str& filepath, FIlehandle& handle)
     handle.offset = 0;
     handle.prot = PROT_READ;
     handle.flags = MAP_SHARED;
+    
+}
+
+const str make_temp_file(const str& filepath, const size_t size)
+{
+    str temp_filepath = filepath + ".temp";
+    int fd = open(temp_filepath.c_str(), O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+    ftruncate(fd, size);
+    close(fd);
+    return temp_filepath;
 }
 
 uint8_t* map_file(const int work, const FIlehandle& handle, uint64_t offset, int prot, int flags)
@@ -148,7 +158,7 @@ uint8_t* map_file(const int work, const FIlehandle& handle, uint64_t offset, int
 }
 
 
-void buffered_ctr_worker(const uint8_t* plainfile, const uint8_t* tempfile, const int8_t algorithm, const str& hexkey, const str& hexiv, int start, int chunksize, int chunknum, int threadcount){
+void buffered_ctr_worker(const uint8_t* plainfile, const uint8_t* tempfile, const int8_t algorithm, const str& hexkey, const str& hexiv, int start, int chunksize, int chunknum, int threadcount, bool encrypt, size_t total_size){
     
     auto key = Botan::hex_decode_locked(hexkey);
     auto iv = Botan::hex_decode_locked(hexiv);
@@ -156,13 +166,13 @@ void buffered_ctr_worker(const uint8_t* plainfile, const uint8_t* tempfile, cons
     
     switch(algorithm){
         case 1:
-            algo = "CTR-BE(AES-256)"
+            algo = "CTR-BE(AES-256)";
             break;
         case 2:
-            algo = "CTR-BE(Twofish)"
+            algo = "CTR-BE(Twofish)";
             break;
         case 3:
-            algo = "CTR-BE(Threefish-512)"
+            algo = "CTR-BE(Threefish-512)";
             break;
     }
             
@@ -172,19 +182,26 @@ void buffered_ctr_worker(const uint8_t* plainfile, const uint8_t* tempfile, cons
 
     for(int i = 0; i< chunknum*chunksize; i += chunksize){
         gate.acquire();
+        int offset = i;
 
-        pool.detach_task([algo, key, iv, plainfile, tempfile, offset, chunksize, encrypt](){
+        pool.detach_task([algo, key, iv, plainfile, tempfile, offset, chunksize, encrypt, total_size](){
             auto enc = Botan::StreamCipher::create_or_throw(algo);
             enc->set_key(key);
             enc->set_iv(iv);
             enc->seek(offset);
+            size_t remain_size = total_size - offset;
+            size_t current_chunk_size = (chunksize < remain_size) ? chunksize : remain_size;
 
             if(encrypt){
-                enc->process(plainfile + offset, tempfile + offset + 111, chunksize);
+                enc->cipher(plainfile + offset, tempfile + offset + 111, current_chunk_size);
             } else {
-                enc->process(plainfile + offset + 111, tempfile + offset, chunksize);
+                enc->cipher(plainfile + offset + 111, tempfile + offset, current_chunk_size);
             }
+
+            gate.release();
         });
+
+        
     }
 }
 
@@ -195,7 +212,18 @@ void buffered_ctr_worker(const uint8_t* plainfile, const uint8_t* tempfile, cons
 
 
 
-int encrypt(const str& filepath, const str& writepath, const str& pbkdf, const str& algorithm, const str& mode, const str& key, const str& iv, int threadcount, bool mac){
-    
-    
+int encrypt(const str& filepath, const str& pbkdf, const str& algorithm, const str& mode, const str& key, const str& iv, int threadcount, bool mac, const str& writepath = ""){
+
+    Filehandle plainhandle;
+    get_handle(filepath, plainhandle);
+
+    str temp_filepath;
+    if(writepath.empty()){
+        temp_filepath = make_temp_file(filepath, plainhandle.size + sizeof(Header));
+    } else {
+        temp_filepath = make_temp_file(writepath, plainhandle.size + sizeof(Header));
+    }
+
+    Filehandle temphandle;
+    get_handle(temp_filepath, temphandle);
 }
