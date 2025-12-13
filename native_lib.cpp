@@ -110,7 +110,7 @@ uint8_t get_mod(const str& mod){
 struct FIlehandle {
     int fd;
     size_t size;
-    off_t offset;
+    uint64_t offset;
     int prot;
     int flags;
 } // mmap용 파일 핸들 구조체(기본형)
@@ -127,7 +127,7 @@ void get_handle(const str& filepath, FIlehandle& handle)
     handle.flags = MAP_SHARED;
 }
 
-uint8_t* map_file(const int work, const FIlehandle& handle, off_t offset, int prot, int flags)
+uint8_t* map_file(const int work, const FIlehandle& handle, uint64_t offset, int prot, int flags)
 {
     size_t size;
     switch (work){
@@ -170,6 +170,22 @@ void buffered_ctr_worker(const uint8_t* plainfile, const uint8_t* tempfile, cons
    
     std::counting_semaphore<> gate(threadcount*QUEUE_STACK); //Q1
 
+    for(int i = 0; i< chunknum*chunksize; i += chunksize){
+        gate.acquire();
+
+        pool.detach_task([algo, key, iv, plainfile, tempfile, offset, chunksize, encrypt](){
+            auto enc = Botan::StreamCipher::create_or_throw(algo);
+            enc->set_key(key);
+            enc->set_iv(iv);
+            enc->seek(offset);
+
+            if(encrypt){
+                enc->process(plainfile + offset, tempfile + offset + 111, chunksize);
+            } else {
+                enc->process(plainfile + offset + 111, tempfile + offset, chunksize);
+            }
+        });
+    }
 }
 
 
