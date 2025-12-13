@@ -1,9 +1,17 @@
-#include <iostream>
-#include <string>
-#include <vector>
-#include <cstdint>
-#include <filesystem>
-#include "BS_thread_pool.hpp"
+#include <iostream>       // std::cout, std::cerr 등
+#include <string>         // std::string
+#include <vector>         // std::vector
+#include <cstdint>        // uint8_t, uint32_t 등
+#include <filesystem>     // std::filesystem
+#include <fcntl.h>        // open, O_RDONLY, O_CREAT 등
+#include <unistd.h>       // close, ftruncate, lseek 등
+#include <sys/stat.h>     // struct stat, fstat
+#include <sys/mman.h>     // mmap, PROT_READ, PROT_WRITE, MAP_SHARED 등
+#include <cstring>        // memcpy, memset
+#include <semaphore>      // std::counting_semaphore
+#include "BS_thread_pool.hpp" // 사용자 정의 thread pool
+#include <botan/hex.h>    // Botan::hex_decode_locked
+#include <botan/stream_cipher.h> // Botan::StreamCipher
 
 namespace fs = std::filesystem;
 using str = std::string;
