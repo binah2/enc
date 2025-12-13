@@ -110,9 +110,7 @@ uint8_t get_mod(const str& mod){
 struct FFilehandle {
     int fd;
     size_t size;
-    uint64_t offset;
-    int prot;
-    int flags;
+    
 } // mmap용 파일 핸들 구조체(기본형)
 
 void get_handle(const str& filepath, FFilehandle& handle)
@@ -122,10 +120,7 @@ void get_handle(const str& filepath, FFilehandle& handle)
     fstat(fd, &st);
     handle.fd = fd;
     handle.size = st.st_size;
-    handle.offset = 0;
-    handle.prot = PROT_READ;
-    handle.flags = MAP_SHARED;
-    
+
 }
 
 const str make_temp_file(const str& filepath, const size_t size)
@@ -214,6 +209,9 @@ void buffered_ctr_worker(const uint8_t* plainfile, const uint8_t* tempfile, cons
 
 int encrypt(const str& filepath, const str& pbkdf, const str& algorithm, const str& mode, const str& key, const str& iv, int threadcount, bool mac, const str& writepath = ""){
 
+    Header header;
+
+
     FFilehandle plainhandle;
     get_handle(filepath, plainhandle);
 
@@ -226,5 +224,8 @@ int encrypt(const str& filepath, const str& pbkdf, const str& algorithm, const s
 
     FFilehandle temphandle;
     get_handle(temp_filepath, temphandle);
-    
+
+    uint8_t* plainfile = map_file(1, plainhandle, 0, PROT_READ, MAP_SHARED);
+    uint8_t* tempfile = map_file(2, temphandle, 0, PROT_READ | PROT_WRITE, MAP_SHARED);
+
 }
