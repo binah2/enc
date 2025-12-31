@@ -13,4 +13,5 @@ cmake --build build
 ./build/enc
 
 > adjust `VCPKG_TARGET_TRIPLET` for your platform (e.g., x64-windows, x64-osx).
+> use any directory instead of `/tmp/vcpkg` if you prefer a persistent installation.
 ```
