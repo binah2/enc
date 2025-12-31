@@ -1,4 +1,4 @@
-#include <botan-3/botan/version.h>
+#include <botan/version.h>
 #include <iostream>
 
 int main() {
